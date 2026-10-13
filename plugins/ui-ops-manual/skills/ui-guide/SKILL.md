@@ -7,6 +7,11 @@ description: Use when creating or revising a system UI 操作說明書, user man
 
 建立可操作、可驗證的系統 UI 說明書。先確認畫面範圍與預設模板；用實機和來源證據描述畫面，而不是猜測控制項或後續影響。
 
+## 操作文字（測試規範）
+
+首次撰寫或修訂操作文字前，閱讀 [references/manual-writing-standard.md](references/manual-writing-standard.md)（writing-pilot-20261013.2）。正文面向一般系統操作者，先用畫面名稱與日常用語說明操作、條件、選項與計算影響，必要業務詞首次短解釋，UI 原文照保留；代理試作、未儲存／未執行狀態、工具、hash、人工 pending 與 QA 限制留在 QA／交付說明，draft 只在檔名或交付說明標示，除非有證據且對讀者有用，不寫入正文。計算順序用白話，必要才用簡單數字例子，避免大量公式符號、英文變數與程式術語，不遺失條件或改變公式。起草後回查抽象措辭、計算選項的適用條件／影響／順序／未命中與未填退回，並保留必要警告；不為具體而補造事實。將原句、問題、修正或保留理由記入既有 finding ledger，不要求每句紀錄、不增加 schema 或 review 輪次；改寫後查條件、順序、否定與數值，建置後讀回真正 DOCX 的正文、表格與圖說。此規範不改變本版取證、隱碼與渲染能力。
+
+
 ## 產製路由與必要 gate
 
 依序完成「範圍盤點與最小代表案例矩陣骨架 → 一張代表圖端到端實測與嵌入可讀性 → 小批次證據與隱碼 → 建置前完成語意 inventory 核對 → 文件建置 → renderer／完整版面 QA → 獨立交付審核」。每一關留下可追溯結果；各模型可調整內容分段與版面細節，但不能跳過證據、隱碼、渲染或審核關卡。以下 refs 依階段必讀，不得只讀最新 review 訊息或只按關鍵字挑選：
@@ -18,11 +23,13 @@ description: Use when creating or revising a system UI 操作說明書, user man
 - **標註、renderer QA 前**閱讀 [references/render-and-annotation-qa.md](references/render-and-annotation-qa.md) 與 [references/safe-word-render-policy.md](references/safe-word-render-policy.md)。
 - **準備交付／review 前**閱讀 [references/independent-delivery-review.md](references/independent-delivery-review.md)。第二輪以既有通過 review 或使用者明確接受的範圍／限制為基準；保持整份版面檢查，只有 hash 與依賴均可驗證且未變的內容才可承接語意 review。reviewer 直接讀取需求、成品與原始證據，不採信 builder 的 `verified`；無獨立 reviewer 時明確標記 `independent review pending`，可繼續其他工作，檔名、資料夾或交付對話只能將產物標示 `draft`。
 
+本技能每次交付都必須讀 [references/acceptance-rule-catalog.json](references/acceptance-rule-catalog.json)，並在最終 review artifact 的 `acceptance.items` 逐項回報 `id`、`applicable`、`status`、`reason`、`evidence` 與實際輸出 `actual_artifacts`。catalog 的每個 `required: true` row 都要出現一次；`always` row 不得改成不適用，`conditional` row 只有明示 scope 例外才可用 `na`／`not_applicable`。它把適用規範分成原子項目，四類既有 checks 仍只作摘要；每個適用項目的 reason 或支援欄位要寫明 target scope、location 與 rationale；evidence 必須回指 `reviewed_files` 並能定位最終 DOCX、所有最終渲染頁面、嵌圖或外部 QA。來源規範本身不能代替最終輸出證據；缺項、重複、無法檢視、pending／blocked 或 hash 不符不得宣稱 pass。
+
 擷取前必讀 [references/screenshot-completeness-workflow.md](references/screenshot-completeness-workflow.md)：先跑通完整頁面擷取、隱碼、紅框／編號、嵌入及渲染，再依 [references/incremental-qa-workflow.md](references/incremental-qa-workflow.md) 由一張代表圖校準實際嵌入可讀性後按畫面與狀態小批次製作。完整頁面是主圖，局部放大只能補充；依代表案例矩陣逐項驗收，不能以草稿或少量補圖結束尚可繼續的工作。
 
 每張圖片的 raw／redacted／annotated 路徑、source SHA、capture state、座標與狀態，統一依 [references/screenshot-manifest.md](references/screenshot-manifest.md) 保存。使用者在目前任務已接受預設或明示略過範圍確認時，沿用該確認，不重複詢問同一授權。
 
-QA record 同時記錄本次使用的 `ui-ops-manual` 版次（目前基礎版次為 `0.5.1`；本機安裝若有 build suffix，以 plugin manifest 完整版本為準）、實際讀過的相對 reference 路徑與適用 schema 版次；依 [references/incremental-qa-workflow.md](references/incremental-qa-workflow.md) 維護唯一累積 finding ledger、案例矩陣、唯一 inventory、資產凍結／checkpoint 與失效依賴，並分開記錄各 QA phase 的 active／等待時間與返工原因。並行區段只計一次共享 wall time，不把等待重複加到工作時間；這些是觀測紀錄，不是硬性時間配額。每次 review 都保留前一輪未解缺陷清單，將新 findings 合併追蹤，優先修正阻擋項並記錄修正證據；不影響主要流程的措辭精緻度、次要欄位深度或輕微美觀可附 reason／evidence 記為 accepted limitation，不反覆退回，不能只以最後一則訊息取代歷史缺陷。
+QA record 同時記錄本次使用的 `ui-ops-manual` 版次（目前基礎版次為 `0.6.0`；本機安裝若有 build suffix，以 plugin manifest 完整版本為準）、實際讀過的相對 reference 路徑與適用 schema 版次；依 [references/incremental-qa-workflow.md](references/incremental-qa-workflow.md) 維護唯一累積 finding ledger、案例矩陣、唯一 inventory、資產凍結／checkpoint 與失效依賴，並分開記錄各 QA phase 的 active／等待時間與返工原因。並行區段只計一次共享 wall time，不把等待重複加到工作時間；這些是觀測紀錄，不是硬性時間配額。每次 review 都保留前一輪未解缺陷清單，將新 findings 合併追蹤，優先修正阻擋項並記錄修正證據；不影響主要流程的措辭精緻度、次要欄位深度或輕微美觀可附 reason／evidence 記為 accepted limitation，不反覆退回，不能只以最後一則訊息取代歷史缺陷。
 
 ## 新任務第一輪回覆（強制）
 
@@ -171,7 +178,7 @@ QA record 同時記錄本次使用的 `ui-ops-manual` 版次（目前基礎版�
 
 ## 文件驗證與交付
 
-1. 先依 screenshot-completeness-workflow 的覆蓋表逐項比對已確認範圍、完整頁面主圖、必要操作／狀態與最終文件位置；每張新建或受影響圖片在 DOCX 建置前執行：`<bundled-python> "<skill>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/one.json" --base-dir ".." --output "<qa>/one-manifest-validation.json"`。未變且 asset ledger 的 manifest／source hash／依賴可驗證時，可引用既有機械結果，但不能把它當成像素或語意 pass。含截圖的 build 後既有 audit 要以同一 QA record 的 `assetLedger` 凍結資料導出 `--image-evidence` 清單，並讀取報告的 `mechanical_status`／`image_evidence.status`；不能只看 audit exit code。再檢查章節、圖說、紅框標註、每章編號重設、欄位表及更新紀錄。缺圖返回取證補齊，不以少量示例或 draft 當成完成。
+1. 先依 screenshot-completeness-workflow 的覆蓋表逐項比對已確認範圍、完整頁面主圖、必要操作／狀態與最終文件位置；每張新建或受影響圖片在 DOCX 建置前執行：`<bundled-python> "<skill>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/one.json" --base-dir ".." --output "<qa>/one-manifest-validation.json" --verify-annotation-output`。新 DOM 標註另加 `--require-coordinate-provenance`。未變且 asset ledger 的 manifest／source hash／依賴可驗證時，可引用既有機械結果，但不能把它當成像素或語意 pass。含截圖的 build 後既有 audit 要以同一 QA record 的 `assetLedger` 凍結資料導出 `--image-evidence` 清單，並讀取報告的 `mechanical_status`／`image_evidence.status`；不能只看 audit exit code。再檢查章節、圖說、紅框標註、每章編號重設、欄位表及更新紀錄。缺圖返回取證補齊，不以少量示例或 draft 當成完成。
 2. 依 [references/screenshot-redaction-policy.md](references/screenshot-redaction-policy.md) 檢查來源分類、預設敏感值遮蔽、金額處理、redacted／annotated 圖片與媒體清理；原始圖與敏感原值不得進入交付品。validator 的 `geometry_status`／`manifest_status` 只代表 hash、尺寸、bbox 與明示狀態，不能代替逐張圖片檢視或 independent review。
 3. 檢查所有資料變更操作都有成功影響、鎖定條件、失敗／取消行為與操作後檢核。
 4. 依 [references/render-and-annotation-qa.md](references/render-and-annotation-qa.md)、[references/default-document-layout.md](references/default-document-layout.md) 與 [references/safe-word-render-policy.md](references/safe-word-render-policy.md) 使用固定的安全 Word 工作根目錄，先分類「Word 不可用」或「沙箱／路徑權限受限」，再決定重試、停止或經使用者確認的備援；含 CJK live text 時，CJK glyph 預檢必須先通過。

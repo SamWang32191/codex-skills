@@ -167,10 +167,10 @@ manifest 的 `sourceImage` 應指向這份 canonical PNG，`sourceSha256`／`cap
 在 DOCX 建置前，對**每一份** per-image manifest 執行：
 
 ```text
-<bundled-python> "<skill>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/create-task.json" --base-dir ".." --output "<qa>/create-task-manifest-validation.json"
+<bundled-python> "<skill>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/create-task.json" --base-dir ".." --output "<qa>/create-task-manifest-validation.json" --verify-annotation-output
 ```
 
-新 DOM 標註流程在同一命令追加 `--require-coordinate-provenance`，並讀取輸出的 `coordinate_provenance.status` 與 `manifest_status`；不能只看 exit code，也不能以這個機械 gate 取代逐張實圖檢查。舊 manifest 未使用此 flag 時維持相容，但不得把它當成新 DOM 流程的完成證據。
+新 DOM 標註流程在同一命令追加 `--require-coordinate-provenance`；若需同時驗證 annotated PNG，保留 `--verify-annotation-output`。讀取輸出的 `coordinate_provenance.status` 與 `manifest_status`；不能只看 exit code，也不能以這個機械 gate 取代逐張實圖檢查。舊 manifest 未使用此 flag 時維持相容，但不得把它當成新 DOM 流程的完成證據。
 
 `--base-dir` 是相對於 manifest 所在目錄的圖片根目錄；報告輸出必須是新檔，不能覆寫 manifest 或三張輸入圖片。工具驗證：
 
