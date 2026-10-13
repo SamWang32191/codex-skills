@@ -5,9 +5,14 @@ description: Use when creating or revising a 系統 UI 操作說明書, user man
 
 # UI 操作說明書（輕量版）
 
-建立可操作、可驗證的系統 UI 說明書。輕量版以實機畫面和可追溯來源描述 UI，不猜測控制項或後續影響；使用 Python、`python-docx` 和 Pillow 建立 DOCX、處理圖片與做可驗證的結構 QA。版本候選為 `0.5.1`，證據、隱碼、操作語意與交付阻擋標準對標一般版 `0.5.1`；差異只在 renderer 不可用時的版面／結構可驗證範圍。
+建立可操作、可驗證的系統 UI 說明書。輕量版以實機畫面和可追溯來源描述 UI，不猜測控制項或後續影響；使用 Python、`python-docx` 和 Pillow 建立 DOCX、處理圖片與做可驗證的結構 QA。版本候選為 `0.6.0`，證據、隱碼、操作語意與交付阻擋標準對標一般版 `0.6.0`；差異只在 renderer 不可用時的版面／結構可驗證範圍。
 
 本版流程不依賴或使用 `Documents`、Word 或 LibreOffice renderer。可做 DOCX 內容讀回、嵌圖清單／雜湊、圖說與結構檢查，以及以 Pillow 產生實際嵌圖尺寸的內容預覽；這些結果只能稱為內容預覽或結構／封裝檢查，不能宣稱已通過 Word 分頁、字型、換行或最終視覺渲染。`render_visual.status` 使用 `not_performed` 或 `out_of_scope` 並附原因時，若其他適用關卡完成，仍可在輕量版範圍內正式交付；本流程未使用 renderer 本身不構成 `blocked`。
+
+## 操作文字（測試規範）
+
+首次撰寫或修訂操作文字前，閱讀 [references/manual-writing-standard.md](references/manual-writing-standard.md)（writing-pilot-20261013.2）。正文面向一般系統操作者，先用畫面名稱與日常用語說明操作、條件、選項與計算影響，必要業務詞首次短解釋，UI 原文照保留；代理試作、未儲存／未執行狀態、工具、hash、人工 pending 與 QA 限制留在 QA／交付說明，draft 只在檔名或交付說明標示，除非有證據且對讀者有用，不寫入正文。計算順序用白話，必要才用簡單數字例子，避免大量公式符號、英文變數與程式術語，不遺失條件或改變公式。起草後回查抽象措辭、計算選項的適用條件／影響／順序／未命中與未填退回，並保留必要警告；不為具體而補造事實。將原句、問題、修正或保留理由記入既有 finding ledger，不要求每句紀錄、不增加 schema 或 review 輪次；改寫後查條件、順序、否定與數值，建置後讀回真正 DOCX 的正文、表格與圖說。此規範不改變本版取證、隱碼與渲染能力。
+
 
 ## 工作路由與必要規範
 
@@ -18,7 +23,7 @@ description: Use when creating or revising a 系統 UI 操作說明書, user man
 - 取證前讀 [screenshot-completeness-workflow.md](references/screenshot-completeness-workflow.md)、[screenshot-manifest.md](references/screenshot-manifest.md)、[screenshot-redaction-policy.md](references/screenshot-redaction-policy.md) 和 [incremental-qa-workflow.md](references/incremental-qa-workflow.md)。
 - 標註前讀 [annotation-qa.md](references/annotation-qa.md)，需要座標校準或內容預覽時再讀 [render-and-annotation-qa.md](references/render-and-annotation-qa.md)。
 - build 前讀 [document-structure-qa.md](references/document-structure-qa.md)、[default-document-layout.md](references/default-document-layout.md) 和 [visual-consistency-standard.md](references/visual-consistency-standard.md)。
-- 交付前讀 [independent-delivery-review.md](references/independent-delivery-review.md)。
+- 交付前必讀 [independent-delivery-review.md](references/independent-delivery-review.md) 與 [acceptance-rule-catalog.json](references/acceptance-rule-catalog.json)。catalog 的每個 `required: true` row 都要在 `acceptance.items` 出現一次；`always` row 不得改成不適用，`conditional` row 只有明示 scope 例外才可用 `na`／`not_applicable`。catalog 把規範分成原子項目，四類既有 checks 仍只作摘要；最終 review artifact 必須在 `acceptance.items` 逐項回報 `id`、`applicable`、`status`、`reason`、`evidence` 與實際輸出 `actual_artifacts`。每個適用項目的 reason 或支援欄位要寫明 target scope、location 與 rationale；evidence 必須回指 `reviewed_files` 並能定位最終 DOCX、嵌圖、可直接檢視的 screenshot PNG 或外部 QA。來源規範本身不能代替最終輸出證據；缺項、重複、無法檢視、pending／blocked 或 hash 不符不得宣稱 pass。Lite 只做 DOCX 文字／表格／圖片讀回、結構檢查與 screenshot PNG 直接檢視，`render_visual` 誠實填 `not_performed`／`out_of_scope`，不可渲染 DOCX。
 
 QA record 記錄本次 `ui-ops-manual-lite` 版本、實際讀過的相對 reference 路徑、適用 schema、代表圖／批次、唯一 finding ledger、資產 freeze／checkpoint、回歸和實際整改輪次。不要用一份新的審核結果取代既有 ledger，也不要把完整版的 reference 或安裝狀態當作 lite 的前置條件。
 
@@ -115,7 +120,7 @@ lite 的結構／幾何檢查要攔截可由 OOXML／封裝可靠判定的風險
 
 每個已通過階段 freeze source／output hash、capture state、依賴與 builder 輸入，建立版本化、不可覆寫的 immutable checkpoint；raw、redacted、annotated、manifest、caption、DOCX 或需求證據變更會使受影響下游 review 失效，必須從該依賴重建並重新檢查。建置後一定讀回真正 output，不能把 source 已更新當成成品已更新。
 
-builder 可以先直接看圖並交接 `draft`／待 reviewer 狀態；最終交付 reviewer 必須是 builder 以外的獨立人工或執行者，`builder.id` 與 `reviewer.id` 明確且不同，不能由 builder 改名自審。沒有 reviewer、圖片／需求證據不可讀、必要 evidence 缺失或過期時為 `blocked`／`draft`；缺 renderer 本身不列入 blocker。review JSON 固定包含 `requirements`、`redaction`、`operation`、`layout_structure` 四類 checks，及 `render_visual` 的 `not_performed`／`out_of_scope` 原因。所有 artifact／reviewed files hash 必須綁定真正輸出，任何受影響檔案變更都要重做相關 checks。
+builder 可以先直接看圖並交接 `draft`／待 reviewer 狀態；最終交付 reviewer 必須是 builder 以外的獨立人工或執行者，`builder.id` 與 `reviewer.id` 明確且不同，不能由 builder 改名自審。沒有 reviewer、圖片／需求證據不可讀、必要 evidence 缺失或過期時為 `blocked`／`draft`，並明確標示 `independent review pending`；缺 renderer 本身不列入 blocker。review JSON 固定包含 `requirements`、`redaction`、`operation`、`layout_structure` 四類 checks，及 `render_visual` 的 `not_performed`／`out_of_scope` 原因。所有 artifact／reviewed files hash 必須綁定真正輸出，任何受影響檔案變更都要重做相關 checks。
 
 ## 驗證與交付回報
 
@@ -123,13 +128,14 @@ builder 可以先直接看圖並交接 `draft`／待 reviewer 狀態；最終交
 
 ```text
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\redact.py" check --image "<qa>\raw.png" --redacted "<qa>\redacted.png" --manifest "<qa>\screenshot.json" --provenance "<qa>\provenance.json" --require-checked
-& "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" check --image "<qa>\redacted.png" --annotations "<qa>\screenshot.json" --require-approved
-& "<venv>\Scripts\python.exe" "<skill-path>\scripts\validate_screenshot_manifest.py" --manifest "<qa>\screenshot.json" --output "<qa>\screenshot-validation.json" --require-coordinate-provenance
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" draw --image "<qa>\redacted.png" --annotations "<qa>\screenshot.json" --output "<qa>\annotated.png" --provenance-output "<qa>\annotation-provenance.json"
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" check --image "<qa>\redacted.png" --annotations "<qa>\screenshot.json" --output-image "<qa>\annotated.png" --verify-output --require-approved
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\validate_screenshot_manifest.py" --manifest "<qa>\screenshot.json" --output "<qa>\screenshot-validation.json" --require-coordinate-provenance --verify-annotation-output
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\build_docx.py" --manifest "<workspace>\manual.json" --output "<deliverable>\manual.docx"
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\preview_docx.py" --docx "<deliverable>\manual.docx" --output-dir "<qa>\content-preview" --dpi 96
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\verify_docx.py" --docx "<deliverable>\manual.docx" --manifest "<workspace>\manual.json"
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\audit_delivery.py" --docx "<deliverable>\manual.docx" --output "<qa>\structure.json" --image-evidence "<qa>\delivered-images.json" --require-default-layout
-& "<venv>\Scripts\python.exe" "<skill-path>\scripts\audit_delivery.py" --docx "<deliverable>\manual.docx" --review "<qa>\review.json" --manifest "<workspace>\manual.json" --output "<qa>\review-validation.json" --image-evidence "<qa>\delivered-images.json" --require-default-layout
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\audit_delivery.py" --docx "<deliverable>\manual.docx" --review "<qa>\review.json" --manifest "<workspace>\manual.json" --output "<qa>\review-validation.json" --image-evidence "<qa>\delivered-images.json" --require-acceptance --acceptance-catalog "<skill-path>\references\acceptance-rule-catalog.json" --require-default-layout
 ```
 
 上列 validator 命令適用新 DOM 標註流程，必須保留 `--require-coordinate-provenance`；沿用舊 manifest 的相容模式不能冒充本次新 DOM 標註已通過。

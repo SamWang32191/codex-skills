@@ -89,14 +89,14 @@ Windows PowerShell:
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\redact.py" check --image "<raw.png>" --redacted "<redacted.png>" --manifest "<screenshot.json>" --provenance "<provenance.json>" --require-checked
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" check --image "<redacted.png>" --annotations "<screenshot.json>"
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" draw --image "<redacted.png>" --annotations "<screenshot.json>" --output "<annotated.png>" --provenance-output "<annotation-provenance.json>"
-& "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" check --image "<redacted.png>" --annotations "<screenshot.json>" --require-approved
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" check --image "<redacted.png>" --annotations "<screenshot.json>" --output-image "<annotated.png>" --verify-output --require-approved
 macOS/Linux:
 "<venv>/bin/python" "<skill-path>/scripts/capture.py" canonicalize --input "<capture>" --raw-output "<qa>/raw/create-task.capture" --canonical-output "<qa>/raw/create-task.png" --provenance-output "<qa>/create-task-capture.json" --capture-id "create-task-filter-open-01" --capture-kind "viewport-sequence" --viewport-width 1536 --viewport-height 864 --scroll-x 0 --scroll-y 0 --capture-state "<qa>/capture-state.json"
 "<venv>/bin/python" "<skill-path>/scripts/redact.py" draw --image "<raw.png>" --manifest "<screenshot.json>" --output "<redacted.png>" --provenance-output "<provenance.json>"
 "<venv>/bin/python" "<skill-path>/scripts/redact.py" check --image "<raw.png>" --redacted "<redacted.png>" --manifest "<screenshot.json>" --provenance "<provenance.json>" --require-checked
 "<venv>/bin/python" "<skill-path>/scripts/annotate.py" check --image "<redacted.png>" --annotations "<screenshot.json>"
 "<venv>/bin/python" "<skill-path>/scripts/annotate.py" draw --image "<redacted.png>" --annotations "<screenshot.json>" --output "<annotated.png>" --provenance-output "<annotation-provenance.json>"
-"<venv>/bin/python" "<skill-path>/scripts/annotate.py" check --image "<redacted.png>" --annotations "<screenshot.json>" --require-approved
+"<venv>/bin/python" "<skill-path>/scripts/annotate.py" check --image "<redacted.png>" --annotations "<screenshot.json>" --output-image "<annotated.png>" --verify-output --require-approved
 ```
 
 redaction adapter 以 `sourceImage`／`sourceSha256`／`redactions`／`protectedAreas`／`captureState` 處理 raw → redacted；annotation adapter 的 `--annotations` 參數直接接收**同一份整合 manifest**，以其中的 `annotations`、`redactedImage`／`redactedSha256` 和同一 `captureState` 處理 redacted → annotated。不要傳第二份 annotation-only JSON，也不要讓模型另寫第三份檔案。`capture.py` 缺少真實 viewport、scroll、capture id、capture kind 或 calibration 時只輸出 `metadataStatus: "incomplete"`，不以 PNG 尺寸或 0 冒充，正式 gate 會阻擋。`redact.py`／`annotate.py` 的 provenance 會綁定實際父圖與受像素影響的 bbox／method／id／cursor／badge input hash；review status 改變不會使圖失效，但父圖、bbox、id、cursor 或 badge 改變必須重建。輸出與 provenance 都是 immutable new paths，不能覆寫輸入或既有檔案。per-image validator 讀同一份整合 manifest 和上述三張圖，輸出新的驗證報告檔；它不回寫圖片或 manifest。
@@ -158,14 +158,14 @@ per-image validator 對同一份整合 manifest 檢查 source raw／redacted／a
 
 ```text
 Windows PowerShell:
-& "<venv>\Scripts\python.exe" "<skill-path>\scripts\validate_screenshot_manifest.py" --manifest "<qa>\create-task.json" --output "<qa>\create-task-manifest-validation.json"
-& "<venv>\Scripts\python.exe" "<skill-path>\scripts\validate_screenshot_manifest.py" --manifest "<qa>\create-task.json" --output "<qa>\create-task-coordinate-validation.json" --require-coordinate-provenance
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\validate_screenshot_manifest.py" --manifest "<qa>\create-task.json" --output "<qa>\create-task-manifest-validation.json" --verify-annotation-output
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\validate_screenshot_manifest.py" --manifest "<qa>\create-task.json" --output "<qa>\create-task-coordinate-validation.json" --require-coordinate-provenance --verify-annotation-output
 macOS/Linux:
-"<venv>/bin/python" "<skill-path>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/create-task.json" --output "<qa>/create-task-manifest-validation.json"
-"<venv>/bin/python" "<skill-path>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/create-task.json" --output "<qa>/create-task-coordinate-validation.json" --require-coordinate-provenance
+"<venv>/bin/python" "<skill-path>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/create-task.json" --output "<qa>/create-task-manifest-validation.json" --verify-annotation-output
+"<venv>/bin/python" "<skill-path>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/create-task.json" --output "<qa>/create-task-coordinate-validation.json" --require-coordinate-provenance --verify-annotation-output
 ```
 
-`--output` 必須是新檔，不能覆寫整合 manifest 或三張輸入圖片；exit 0 只表示 `manifest_status: "pass"` 的報告成功寫出，exit 1 仍要讀取已寫出的 `blocked`／`fail` 報告。
+`--verify-output` 與 `--verify-annotation-output` 只做父圖綁定、標註像素和 hash 的機械檢查；`--output` 必須是新檔，不能覆寫整合 manifest 或三張輸入圖片；exit 0 只表示 `manifest_status: "pass"` 的報告成功寫出，exit 1 仍要讀取已寫出的 `blocked`／`fail` 報告。
 
 新 DOM 流程必須讀取 `coordinate_provenance.status` 和 `manifest_status`；舊 manifest 不帶此 flag 時維持相容，但不能當成新 DOM 座標證據。這個機械 gate 不讀像素、不做 OCR，也不取代 redacted／annotated 圖片的直接檢視。
 

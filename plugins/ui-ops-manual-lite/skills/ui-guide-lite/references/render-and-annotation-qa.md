@@ -11,12 +11,12 @@
 ```text
 Windows PowerShell:
 & "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" check --image "<redacted>.png" --annotations "<screenshot.json>"
-& "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" draw --image "<redacted>.png" --annotations "<screenshot.json>" --output "<annotated>.png"
-& "<venv>\Scripts\python.exe" "<skill-path>\scripts\validate_screenshot_manifest.py" --manifest "<screenshot.json>" --output "<validation.json>"
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\annotate.py" draw --image "<redacted>.png" --annotations "<screenshot.json>" --output "<annotated>.png" --provenance-output "<annotation-provenance.json>"
+& "<venv>\Scripts\python.exe" "<skill-path>\scripts\validate_screenshot_manifest.py" --manifest "<screenshot.json>" --output "<validation.json>" --verify-annotation-output
 macOS/Linux:
 "<venv>/bin/python" "<skill-path>/scripts/annotate.py" check --image "<redacted>.png" --annotations "<screenshot.json>"
-"<venv>/bin/python" "<skill-path>/scripts/annotate.py" draw --image "<redacted>.png" --annotations "<screenshot.json>" --output "<annotated>.png"
-"<venv>/bin/python" "<skill-path>/scripts/validate_screenshot_manifest.py" --manifest "<screenshot.json>" --output "<validation.json>"
+"<venv>/bin/python" "<skill-path>/scripts/annotate.py" draw --image "<redacted>.png" --annotations "<screenshot.json>" --output "<annotated>.png" --provenance-output "<annotation-provenance.json>"
+"<venv>/bin/python" "<skill-path>/scripts/validate_screenshot_manifest.py" --manifest "<screenshot.json>" --output "<validation.json>" --verify-annotation-output
 ```
 
 `check` 可先接受 `proposed`／`pending`／`manual-adjusted` 供 preview；不能為讓 draw 執行而預填 `verified`。builder 必須直接以 100% 並排檢視 raw、redacted、annotated，逐筆確認：
@@ -27,7 +27,7 @@ macOS/Linux:
 4. 圖片狀態、步驟、可用／鎖定條件和 caption 相符。
 5. redaction 只覆蓋敏感值，raw 不在 DOCX 或交付包。
 
-確認後才更新為整合 validator 支援的 `checked`／`verified`，再執行現行的 `--require-approved` gate。狀態欄位不能代替 builder 直接看圖，也不能代替另一位 reviewer 的獨立交付審核。
+確認後才更新為整合 validator 支援的 `checked`／`verified`，再執行 `annotate.py check --output-image "<annotated>.png" --verify-output --require-approved` gate。`--verify-output` 與 `--verify-annotation-output` 只做父圖綁定、標註像素和 hash 的機械檢查；狀態欄位不能代替 builder 直接看圖，也不能代替另一位 reviewer 的獨立交付審核。
 
 ## 座標校準
 
