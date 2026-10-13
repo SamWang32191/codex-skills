@@ -3,7 +3,7 @@
 
 Subcommands:
     draw  --image REDACTED --annotations ANN.json --output OUT.png
-    check --image REDACTED --annotations ANN.json
+    check --image REDACTED --annotations ANN.json [--output-image ANNOTATED.png]
 
 Manifest schema (same shape as the QA reference):
 
@@ -22,7 +22,9 @@ Manifest schema (same shape as the QA reference):
       ]
     }
 
-`check` validates geometry and caption references.  It deliberately permits
+`check` validates geometry and caption references.  With ``--output-image`` or
+``--verify-output`` it also verifies the actual marker pixels against the
+redacted parent and manifest.  It deliberately permits
 ``proposed`` annotations so a preview can be drawn before semantic review.
 Use ``--require-approved`` for the build gate.  ``manual-adjusted`` is a
 provenance value (accepted for compatibility when used as ``status``), never
@@ -42,6 +44,23 @@ from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageDraw
+
+try:
+    from annotation_pixels import (
+        ANNOTATION_RED,
+        AnnotationGeometryError,
+        color_override_errors,
+        render_annotation_layer,
+        verify_annotation_output,
+    )
+except ImportError:  # pragma: no cover - package import fallback
+    from .annotation_pixels import (  # type: ignore[no-redef]
+        ANNOTATION_RED,
+        AnnotationGeometryError,
+        color_override_errors,
+        render_annotation_layer,
+        verify_annotation_output,
+    )
 
 try:
     from evidence import (
@@ -64,7 +83,7 @@ except ImportError:  # pragma: no cover - package import fallback
         is_text,
     )
 
-RED = (214, 69, 69)  # kept distinct from the teal brand so it reads as an alert
+RED = ANNOTATION_RED  # kept distinct from the teal brand so it reads as an alert
 PREVIEW_STATUSES = {"proposed", "pending", "manual-adjusted"}
 APPROVED_STATUSES = {"approved", "verified", "checked"}
 KNOWN_STATUSES = PREVIEW_STATUSES | APPROVED_STATUSES | {"blocked"}
@@ -106,6 +125,7 @@ def hard_errors(
     """
 
     errors: list[str] = []
+    errors.extend(color_override_errors(manifest))
     try:
         width, height = image_size(image_path)
     except (OSError, ValueError) as error:
@@ -410,51 +430,25 @@ def draw_annotations(
         raise ValueError("annotation output must not overwrite the parent image")
     if output_path.exists():
         raise ValueError("annotation output already exists; choose a new immutable output path")
-    with Image.open(image_path) as source:
-        if source.mode in ("RGBA", "LA", "P"):
-            image = source.convert("RGB")
-        else:
-            image = source.convert("RGB")
-        width, height = image.size
-    image.info.clear()
-
-    draw = ImageDraw.Draw(image)
-    for index, item in enumerate(manifest["annotations"]):
-        bbox = item["bbox"]
-        x, y, w, h = (int(bbox[k]) for k in ("x", "y", "width", "height"))
-        draw.rectangle([x, y, x + w, y + h], outline=RED, width=stroke)
-        if item.get("cursor"):
-            draw_cursor(draw, item["cursor"], bbox)
-
-        number = str(item["id"])
-        border = max(3, math.ceil(font_size * 0.16))
-        badge_w = font_size + 2 * border
-        badge_h = font_size + 2 * border
-        badge = badge_box(
-            x,
-            y,
-            badge_w,
-            badge_h,
-            width,
-            height,
-            bbox_width=w,
-            bbox_height=h,
-            badge_spec=item.get("badgePosition", item.get("badge")),
-        )
-        if badge is None:
-            raise ValueError(f"annotation {item.get('id')!r}: badge position is outside the image")
-        bx, by, bw, bh = badge
-        draw.rounded_rectangle([bx, by, bx + bw, by + bh], radius=4, fill=RED)
-        draw.text(
-            (bx + bw / 2, by + bh / 2),
-            number,
-            fill=(255, 255, 255),
-            anchor="mm",
-            font_size=font_size,
-        )
-
+    try:
+        with Image.open(image_path) as source:
+            image, _markers = render_annotation_layer(
+                source, manifest, stroke=stroke, font_size=font_size
+            )
+    except AnnotationGeometryError as error:
+        raise ValueError(f"annotation render failed: {error.code}") from error
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path, format="PNG")
+    pixel_report = verify_annotation_output(
+        output_path,
+        image_path,
+        manifest,
+        stroke=stroke,
+        font_size=font_size,
+    )
+    if pixel_report["status"] != "pass":
+        codes = ", ".join(pixel_report.get("reason_codes", [])) or "annotation_pixel_check_failed"
+        raise ValueError(f"annotation pixel verification failed: {codes}")
     print(f"ANNOTATED_IMAGE={output_path}")
     parent_hash = file_sha256(image_path)
     output_hash = file_sha256(output_path)
@@ -530,6 +524,18 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     check.add_argument("--font-size", type=int, default=26, help="Badge font size used by draw.")
     check.add_argument("--provenance", type=Path, help="Optional provenance JSON produced by draw.")
     check.add_argument(
+        "--output-image",
+        "--annotated-image",
+        dest="output_image",
+        type=Path,
+        help="Optional annotated PNG to verify against the redacted parent.",
+    )
+    check.add_argument(
+        "--verify-output",
+        action="store_true",
+        help="Require pixel verification of the annotated output (use --output-image or --provenance).",
+    )
+    check.add_argument(
         "--require-approved",
         action="store_true",
         help="Require approved/verified status instead of allowing a preview.",
@@ -553,6 +559,8 @@ def main(argv: list[str]) -> int:
             for message in errors:
                 print(f"annotate.py check: {message}", file=sys.stderr)
             return 1
+        provenance_payload: dict[str, Any] | None = None
+        provenance_output_path: Path | None = None
         if args.command == "check" and args.provenance is not None:
             try:
                 provenance = json.loads(args.provenance.expanduser().resolve().read_text(encoding="utf-8"))
@@ -560,6 +568,7 @@ def main(argv: list[str]) -> int:
                 raise ValueError(f"cannot read provenance {args.provenance}: {error}") from error
             if not isinstance(provenance, dict):
                 raise ValueError("provenance must be a JSON object")
+            provenance_payload = provenance
             output_value = provenance.get("outputImage", provenance.get("annotatedImage"))
             if isinstance(output_value, str) and output_value.strip():
                 output_path = Path(output_value).expanduser()
@@ -569,6 +578,7 @@ def main(argv: list[str]) -> int:
                     # manifest location instead of the caller's CWD.
                     output_path = args.annotations.expanduser().resolve().parent / output_path
                 output_path = output_path.resolve()
+                provenance_output_path = output_path
             else:
                 output_path = args.image.expanduser().resolve()
             provenance_errors = validate_annotation_provenance(
@@ -582,6 +592,28 @@ def main(argv: list[str]) -> int:
             if provenance_errors:
                 for message in provenance_errors:
                     print(f"annotate.py check: {message}", file=sys.stderr)
+                return 1
+        if args.command == "check" and (
+            args.output_image is not None or provenance_output_path is not None or args.verify_output
+        ):
+            output_path = (
+                args.output_image.expanduser().resolve()
+                if args.output_image is not None
+                else provenance_output_path
+            )
+            if output_path is None:
+                raise ValueError("--verify-output requires --output-image or --provenance with outputImage")
+            pixel_report = verify_annotation_output(
+                output_path,
+                args.image.expanduser().resolve(),
+                manifest,
+                stroke=args.stroke,
+                font_size=args.font_size,
+                provenance=provenance_payload,
+            )
+            if pixel_report["status"] != "pass":
+                for code in pixel_report.get("reason_codes", []):
+                    print(f"annotate.py check: {code}", file=sys.stderr)
                 return 1
         if args.command == "draw":
             image_path = args.image.expanduser().resolve()

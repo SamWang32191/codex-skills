@@ -20,6 +20,7 @@ from typing import Any
 
 try:
     from annotate import badge_box
+    from annotation_pixels import verify_annotation_output as _verify_annotation_output
     from evidence import (
         CAPTURE_KINDS,
         REDACTION_CATEGORIES,
@@ -41,6 +42,7 @@ try:
     )
 except ImportError:  # pragma: no cover - package import fallback
     from .annotate import badge_box  # type: ignore[no-redef]
+    from .annotation_pixels import verify_annotation_output as _verify_annotation_output  # type: ignore[no-redef]
     from .evidence import (  # type: ignore[no-redef]
         CAPTURE_KINDS,
         REDACTION_CATEGORIES,
@@ -461,6 +463,7 @@ def validate_manifest(
     manifest_path: str | Path,
     base_dir: str | Path | None = None,
     require_coordinate_provenance: bool = False,
+    verify_annotation_output: bool = False,
 ) -> dict[str, Any]:
     path = Path(manifest_path).expanduser().resolve()
     findings: list[dict[str, Any]] = []
@@ -479,6 +482,13 @@ def validate_manifest(
             "independent_review_is_still_required",
         ],
     }
+    if verify_annotation_output:
+        report["limitations"] = [
+            item for item in report["limitations"] if item != "does_not_read_image_pixels_or_ocr"
+        ]
+        report["limitations"].append(
+            "reads_expected_annotation_marker_pixels_only_no_ocr_or_semantic_review"
+        )
     raw = _load(path)
     if raw is None:
         findings.append(_finding("manifest_unreadable"))
@@ -696,6 +706,37 @@ def validate_manifest(
                     )
                 )
 
+    annotation_provenance_for_pixels = _provenance_value(
+        raw.get("annotationProvenance", raw.get("annotatedProvenance")),
+        path,
+        base_dir,
+    )
+    annotation_stroke, annotation_font_size = 3, 26
+    drawing_inputs = (
+        annotation_provenance_for_pixels.get("drawingInputs")
+        if annotation_provenance_for_pixels is not None
+        else None
+    )
+    if isinstance(drawing_inputs, Mapping):
+        candidate_stroke = drawing_inputs.get("stroke")
+        candidate_font_size = drawing_inputs.get("font_size")
+        if isinstance(candidate_stroke, int) and not isinstance(candidate_stroke, bool) and candidate_stroke > 0:
+            annotation_stroke = candidate_stroke
+        if isinstance(candidate_font_size, int) and not isinstance(candidate_font_size, bool) and candidate_font_size > 0:
+            annotation_font_size = candidate_font_size
+    if verify_annotation_output and "redacted" in files and "annotated" in files:
+        output_check = _verify_annotation_output(
+            files["annotated"],
+            files["redacted"],
+            raw,
+            stroke=annotation_stroke,
+            font_size=annotation_font_size,
+            provenance=annotation_provenance_for_pixels,
+        )
+        report["annotation_output"] = output_check
+        if output_check["status"] != "pass":
+            findings.extend(_finding(code, role="annotatedImage") for code in output_check.get("reason_codes", []))
+
     protected_boxes: list[tuple[float, float, float, float] | None] = []
     protected = raw.get("protectedAreas", raw.get("protectedControls", []))
     if not isinstance(protected, list):
@@ -798,6 +839,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Require calibrated CSS-viewport to PNG provenance for DOM annotations",
     )
+    parser.add_argument(
+        "--verify-annotation-output",
+        action="store_true",
+        help="Verify expected red annotation stroke cores in the actual annotated PNG.",
+    )
     return parser
 
 
@@ -805,7 +851,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if _output_conflicts(args.output, args.manifest, args.base_dir):
         return 2
-    report = validate_manifest(args.manifest, args.base_dir, args.require_coordinate_provenance)
+    report = validate_manifest(
+        args.manifest,
+        args.base_dir,
+        args.require_coordinate_provenance,
+        args.verify_annotation_output,
+    )
     payload = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if args.output == "-":
         sys.stdout.write(payload)

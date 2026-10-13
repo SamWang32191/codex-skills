@@ -2,6 +2,8 @@
 
 本文件只用於 `ui-ops-manual-lite` plugin 的版本開發、回歸和 release candidate 驗收；一般製作 UI 手冊時不要求每次啟動三個模型。
 
+若具體驗收任務另有明確的模型與隔離要求，以該任務要求為準，不把本文件的 legacy baseline 變成所有任務的通用門檻。本輪的明確要求是四個乾淨模型執行者：`gpt-5.6-luna`、`gpt-5.6-terra`、`gpt-6.1-sol`、`gpt-6-astra`；每個模型都對相同共保情境分別產出完整版與輕量版文件。這四模型回歸執行仍不等於各份 DOCX 的獨立 reviewer，人工審閱未完成時維持 `independent review pending`。
+
 ## 固定模型與隔離
 
 正式模型基準為：
@@ -14,9 +16,9 @@
 
 每次 plugin 回歸使用乾淨隔離的模型執行者：`fork_turns: "none"`、獨立工作資料夾／瀏覽器頁籤、相同的原始需求、凍結 plugin／原始碼和驗收規範。各模型獨立建立自己的需求骨架與 `scopeMatrix`／`fieldInventory`，不得共享前次對話、prompt 追加內容、截圖／DOCX、finding、修正建議、既有盤點或父任務產物；共用登入狀態與 runtime 若無法避免，須在 QA record 明確記錄。等待其他模型或文件工具的時間只計一次共享 wall time，不能重複累計。
 
-## Luna 的範圍
+## Luna 的範圍（legacy baseline）
 
-Luna 排除於正式驗收基準。可以保留 Luna 的結果作能力觀察，但結果只能標為 `reference-only`，不得用來宣稱版本通過，也不得為了讓 Luna 達標而無限重建整份文件。若 Luna 失敗，仍要依同一 finding ledger 記錄證據與原因；正式決策只依 Terra、Sol 和 Astra。
+在沒有任務特別指定時，Luna 排除於上述 legacy baseline 的正式驗收基準；可以保留 Luna 結果作能力觀察，但不得用來宣稱版本通過，也不得為了讓 Luna 達標而無限重建整份文件。若 Luna 失敗，仍要依同一 finding ledger 記錄證據與原因。若任務像本輪明確指定 Luna 與其他模型共同驗收，則依任務的四模型要求執行，不能把 `reference-only` 套到本輪，也不能把這次模型清單擴張成所有未來任務的硬性要求。
 
 ## 驗收維度
 

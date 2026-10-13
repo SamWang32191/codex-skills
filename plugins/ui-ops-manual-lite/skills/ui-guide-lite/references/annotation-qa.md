@@ -39,12 +39,14 @@ macOS/Linux:
 
 ```text
 Windows PowerShell:
-& "<venv>\Scripts\python.exe" "<skill>\scripts\annotate.py" check --image "<redacted>.png" --annotations "<screenshot.json>" --require-approved
+& "<venv>\Scripts\python.exe" "<skill>\scripts\annotate.py" check --image "<redacted>.png" --annotations "<screenshot.json>" --output-image "<annotated>.png" --verify-output --require-approved
+& "<venv>\Scripts\python.exe" "<skill>\scripts\validate_screenshot_manifest.py" --manifest "<screenshot.json>" --output "<annotation-validation.json>" --verify-annotation-output --require-coordinate-provenance
 macOS/Linux:
-"<venv>/bin/python" "<skill>/scripts/annotate.py" check --image "<redacted>.png" --annotations "<screenshot.json>" --require-approved
+"<venv>/bin/python" "<skill>/scripts/annotate.py" check --image "<redacted>.png" --annotations "<screenshot.json>" --output-image "<annotated>.png" --verify-output --require-approved
+"<venv>/bin/python" "<skill>/scripts/validate_screenshot_manifest.py" --manifest "<screenshot.json>" --output "<annotation-validation.json>" --verify-annotation-output --require-coordinate-provenance
 ```
 
-`--require-approved` 只是建置前的狀態門檻；它不能證明 reviewer 看過正確的控制項。builder 的 `verified` 也不能代替獨立交付審核。若圖片無法檢視，標註 `operation` 與隱碼相關 review 保持 `blocked`，不要填 pass；可繼續其他已授權工作並交付 draft。
+`--verify-output` 與 `--verify-annotation-output` 只做父圖綁定、標註像素和 hash 的機械檢查。`--require-approved` 只是建置前的狀態門檻；它不能證明 reviewer 看過正確的控制項。builder 的 `verified` 也不能代替獨立交付審核。若圖片無法檢視，標註 `operation` 與隱碼相關 review 保持 `blocked`，不要填 pass；可繼續其他已授權工作並交付 draft。
 
 DOM annotation 必須再執行 `validate_screenshot_manifest.py --require-coordinate-provenance`。`dom-manual-adjusted` 必須保存 `adjustmentReason`／`transformedBbox`；人工 bbox 與浮點換算不一致時 gate 保持 blocked，不能只改成 `checked`。實際畫圖可因 Pillow 的整數像素 rasterization 產生小於一像素的視覺差異，仍須由 reviewer 直接看 annotated PNG。
 
