@@ -1,0 +1,461 @@
+{
+  "schema": "ui-manual.acceptance-rule-catalog",
+  "schema_version": 1,
+  "catalog_id": "ui-guide-acceptance-r3",
+  "plugin": "ui-ops-manual",
+  "skill": "ui-guide",
+  "result_contract": {
+    "final_output_only": true,
+    "review_field": "acceptance",
+    "items_field": "items",
+    "required_fields": [
+      "id",
+      "applicable",
+      "status",
+      "reason",
+      "evidence",
+      "actual_artifacts"
+    ],
+    "context_fields": [
+      "target_scope",
+      "location",
+      "rationale"
+    ],
+    "context_policy": "For each applicable item, put target scope, location, and rationale in supported result context fields when available, or state all three explicitly in reason; evidence must identify final output artifacts.",
+    "statuses": [
+      "pass",
+      "fail",
+      "blocked",
+      "pending",
+      "na",
+      "not_applicable"
+    ],
+    "pass_requires_actual_artifacts": true,
+    "evidence_must_reference": "reviewed_files.path",
+    "actual_artifacts_require_sha256": true,
+    "group_evidence_when": "evidence enumerates the exhaustive final target set",
+    "catalog_item_fields": {
+      "required": true,
+      "applicability_values": ["always", "conditional"],
+      "applicability_policy": "Every catalog row is required in acceptance.items. An always row must remain applicable:true; a conditional row may use applicable:false only with status na/not_applicable and a reason for the explicit out-of-scope condition."
+    }
+  },
+  "major_checks": [
+    {
+      "id": "requirements",
+      "summary": "需求、範圍、文字、證據與交付條件。",
+      "atomic_item_ids": [
+        "writing-plain-user-chinese",
+        "writing-action-source",
+        "writing-condition-source",
+        "writing-permission-source",
+        "qa-details-outside-body",
+        "final-evidence",
+        "independent-reviewer-output",
+        "deterministic-defaults",
+        "dependency-recheck"
+      ]
+    },
+    {
+      "id": "redaction",
+      "summary": "敏感類別遮蔽、控制項可讀性與金額預設保留。",
+      "atomic_item_ids": [
+        "redaction-sensitive-opaque",
+        "redaction-amount-default"
+      ]
+    },
+    {
+      "id": "visual",
+      "summary": "最終頁面、表格與圖片相對可用內容區的版面。",
+      "atomic_item_ids": [
+        "layout-container-centered",
+        "layout-flexible-dimensions",
+        "full-render-all-pages"
+      ]
+    },
+    {
+      "id": "operation",
+      "summary": "標註、控制項、狀態、步驟與計算操作語意。",
+      "atomic_item_ids": [
+        "annotation-color",
+        "annotation-target",
+        "annotation-no-text-occlusion",
+        "annotation-caption-control-state",
+        "writing-calc-applicability",
+        "writing-calc-effect",
+        "writing-calc-order",
+        "writing-calc-no-match-fallback",
+        "writing-calc-no-value-fallback",
+        "writing-no-duplicate-actions",
+        "writing-no-duplicate-captions"
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "annotation-color",
+      "major_check": "operation",
+      "applies_when": "annotated images",
+      "blocking": true,
+      "description": "Frames/badges use annotation red; document teal only on explicit user request",
+      "final_output": {
+        "target_scope": "all final annotated images covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "annotation-target",
+      "major_check": "operation",
+      "applies_when": "annotations",
+      "blocking": true,
+      "description": "Each frame/badge targets the actual named control",
+      "final_output": {
+        "target_scope": "all final annotations covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "annotation-no-text-occlusion",
+      "major_check": "operation",
+      "applies_when": "annotations or redactions",
+      "blocking": true,
+      "description": "No frame, badge, or cursor hides required non-sensitive text, labels, values, or messages; redaction blocks cover only intended sensitive values and preserve required amounts by default.",
+      "final_output": {
+        "target_scope": "all final annotations or redactions covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "annotation-caption-control-state",
+      "major_check": "operation",
+      "applies_when": "numbered steps/captions",
+      "blocking": true,
+      "description": "Number, caption, manifest id, control name, and actual state agree",
+      "final_output": {
+        "target_scope": "all final numbered steps/captions covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "redaction-sensitive-opaque",
+      "major_check": "redaction",
+      "applies_when": "captured UI with sensitive values",
+      "blocking": true,
+      "description": "Sensitive categories use precise opaque blocks while labels remain readable",
+      "final_output": {
+        "target_scope": "all final captured UI with sensitive values covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "redaction-amount-default",
+      "major_check": "redaction",
+      "applies_when": "captured UI with amounts",
+      "blocking": true,
+      "description": "Amounts are preserved by default; mask only on explicit user or policy request",
+      "final_output": {
+        "target_scope": "all final captured UI with amounts covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-plain-user-chinese",
+      "major_check": "requirements",
+      "applies_when": "user-facing prose",
+      "blocking": false,
+      "description": "Use clear plain Traditional Chinese; avoid gratuitous math/computer jargon without banning legitimate UI literals. Pure style is non-blocking; unclear meaning that prevents operation, judgment, or verification is a blocker.",
+      "final_output": {
+        "target_scope": "all final user-facing prose covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "always"
+    },
+    {
+      "id": "writing-action-source",
+      "major_check": "requirements",
+      "applies_when": "documented actions",
+      "blocking": true,
+      "description": "Each action names an actual control and has source/capture evidence",
+      "final_output": {
+        "target_scope": "all final documented actions covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "always"
+    },
+    {
+      "id": "writing-condition-source",
+      "major_check": "requirements",
+      "applies_when": "conditions/states/branches",
+      "blocking": true,
+      "description": "Conditions/branches are source-supported; do not invent permissions",
+      "final_output": {
+        "target_scope": "all final conditions/states/branches covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-calc-applicability",
+      "major_check": "operation",
+      "applies_when": "calculation options",
+      "blocking": true,
+      "description": "State when each option applies, including required data/state/role",
+      "final_output": {
+        "target_scope": "all final calculation options covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-calc-effect",
+      "major_check": "operation",
+      "applies_when": "calculation options",
+      "blocking": true,
+      "description": "State what result or data changes",
+      "final_output": {
+        "target_scope": "all final calculation options covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-calc-order",
+      "major_check": "operation",
+      "applies_when": "ordered calculations",
+      "blocking": true,
+      "description": "State source-supported calculation order in plain language",
+      "final_output": {
+        "target_scope": "all final ordered calculations covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-calc-no-match-fallback",
+      "major_check": "operation",
+      "applies_when": "calculations with no-match branches",
+      "blocking": true,
+      "description": "State no-match fallback or leave it pending/blocked when unproven",
+      "final_output": {
+        "target_scope": "all final calculations with no-match branches covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-calc-no-value-fallback",
+      "major_check": "operation",
+      "applies_when": "calculations with missing values",
+      "blocking": true,
+      "description": "State no-value fallback/default/prompt or leave it pending/blocked",
+      "final_output": {
+        "target_scope": "all final calculations with missing values covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-permission-source",
+      "major_check": "requirements",
+      "applies_when": "permission/role prose",
+      "blocking": true,
+      "description": "Only concrete source-supported roles or observable permission differences appear",
+      "final_output": {
+        "target_scope": "all final permission/role prose covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-no-duplicate-actions",
+      "major_check": "operation",
+      "applies_when": "multi-step flows",
+      "blocking": true,
+      "description": "Do not repeat an action without a distinct evidenced state/purpose",
+      "final_output": {
+        "target_scope": "all final multi-step flows covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "writing-no-duplicate-captions",
+      "major_check": "operation",
+      "applies_when": "captions",
+      "blocking": false,
+      "description": "Captions identify image state/target without copying full steps or needless repetition",
+      "final_output": {
+        "target_scope": "all final captions covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "qa-details-outside-body",
+      "major_check": "requirements",
+      "applies_when": "QA metadata exists",
+      "blocking": true,
+      "description": "Tools, hashes, pending review, capture state, and QA limits stay in QA/review/delivery records",
+      "final_output": {
+        "target_scope": "all final QA metadata exists covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "always"
+    },
+    {
+      "id": "layout-container-centered",
+      "major_check": "visual",
+      "applies_when": "tables or positioned media",
+      "blocking": true,
+      "description": "Center relative to the available content container",
+      "final_output": {
+        "target_scope": "all final tables or positioned media covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "layout-flexible-dimensions",
+      "major_check": "visual",
+      "applies_when": "tables or variable media",
+      "blocking": false,
+      "description": "Use flexible dimensions; fixed dimensions need evidence and must not clip",
+      "final_output": {
+        "target_scope": "all final tables or variable media covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "final-evidence",
+      "major_check": "requirements",
+      "applies_when": "acceptance catalog requested",
+      "blocking": true,
+      "description": "Each applicable item reports status, target scope/location, evidence, and rationale against final output; grouped evidence enumerates exhaustive targets",
+      "final_output": {
+        "target_scope": "all final acceptance catalog requested covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "always"
+    },
+    {
+      "id": "independent-reviewer-output",
+      "major_check": "requirements",
+      "applies_when": "claimed review/pass",
+      "blocking": true,
+      "description": "Independent reviewer reads actual final output/evidence; builder/scripts cannot self-certify semantic or visual pass",
+      "final_output": {
+        "target_scope": "all final claimed review/pass covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "always"
+    },
+    {
+      "id": "deterministic-defaults",
+      "major_check": "requirements",
+      "applies_when": "tools/default policies",
+      "blocking": true,
+      "description": "Record fixed deterministic defaults; text lint is advisory, never a forbidden-word gate",
+      "final_output": {
+        "target_scope": "all final tools/default policies covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "always"
+    },
+    {
+      "id": "dependency-recheck",
+      "major_check": "requirements",
+      "applies_when": "dependency changes",
+      "blocking": true,
+      "description": "Recheck changed dependencies/downstream checks only; stop ineffective rebuilds honestly",
+      "final_output": {
+        "target_scope": "all final dependency changes covered by this item",
+        "location": "final DOCX/images and review artifact"
+      },
+      "required": true,
+      "applicability": "conditional"
+    },
+    {
+      "id": "full-render-all-pages",
+      "major_check": "visual",
+      "applies_when": "final DOCX exists",
+      "blocking": true,
+      "description": "Render and directly inspect every final page with the approved full-plugin renderer",
+      "final_output": {
+        "target_scope": "all final DOCX pages",
+        "location": "render manifest/page images and review artifact"
+      },
+      "required": true,
+      "applicability": "always"
+    }
+  ],
+  "defaults": {
+    "annotation": {
+      "frame_rgb": [
+        214,
+        69,
+        69
+      ],
+      "badge_rgb": [
+        214,
+        69,
+        69
+      ],
+      "document_teal_reserved": true,
+      "teal_exception": "only explicit user request"
+    },
+    "redaction": {
+      "method": "opaque-rectangle",
+      "sensitive_categories": [
+        "name",
+        "identity/customer/member/employee id",
+        "address",
+        "phone",
+        "email",
+        "policy/bill/contract/transaction/case id",
+        "password",
+        "token",
+        "api key",
+        "session",
+        "internal account"
+      ],
+      "amounts": "preserve-by-default"
+    },
+    "layout": {
+      "alignment": "available-container-center",
+      "dimensions": "flexible"
+    },
+    "recheck": "changed-dependencies-only",
+    "text_lint": "advisory-hints-only",
+    "render": "all-pages-final-render"
+  }
+}

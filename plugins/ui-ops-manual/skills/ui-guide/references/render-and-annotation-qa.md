@@ -50,10 +50,20 @@ return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 建立或更新每張 manifest 後，在 DOCX 建置前實際執行：
 
 ```text
-<bundled-python> "<skill>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/one.json" --base-dir ".." --output "<qa>/one-manifest-validation.json"
+<bundled-python> "<skill>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/one.json" --base-dir ".." --output "<qa>/one-manifest-validation.json" --verify-annotation-output
 ```
 
 新 DOM 標註在此命令追加 `--require-coordinate-provenance`，並讀取 `coordinate_provenance.status` 和 `manifest_status`；`calibrated` 只證明尺寸／clip provenance，不證明像素對位或隱碼語意。full-page、未知來源、舊 hash 或缺 transform 需 blocked，不能用 helper 呼叫冒充 visual pass。
+
+標註工具的正式命令使用目前 plugin 內的 `annotate.py`：
+
+```text
+<bundled-python> "<skill>/scripts/annotate.py" draw --image "<qa>/redacted.png" --annotations "<qa>/one.json" --output "<qa>/annotated.png" --provenance-output "<qa>/annotation-provenance.json"
+<bundled-python> "<skill>/scripts/annotate.py" check --image "<qa>/redacted.png" --annotations "<qa>/one.json" --output-image "<qa>/annotated.png" --verify-output --require-approved
+<bundled-python> "<skill>/scripts/validate_screenshot_manifest.py" --manifest "<qa>/one.json" --base-dir ".." --output "<qa>/one-manifest-validation.json" --require-coordinate-provenance --verify-annotation-output
+```
+
+`--verify-output` 與 `--verify-annotation-output` 只做父圖綁定、紅色框／badge／游標像素和 hash 的機械檢查；仍須直接檢視每張圖，確認目標控制項、狀態與文字沒有被遮住。輸出與 provenance 必須使用新檔名，不覆寫輸入或既有 checkpoint。
 
 validator 只驗 hash、PNG 尺寸、bbox 範圍、protected area 不重疊、id／caption／source／狀態欄位；`geometry_status: "pass"` 不等於隱碼或標註語意通過。`manifest_status: "pass"` 也只代表 manifest 的機械檢查與明示 review state，`semantic_review` 仍為 `not_performed`。pending 預覽不得報成 manifest pass；builder 仍要逐張 100% 直接檢視，並由 independent reviewer 完成獨立交付審核。
 

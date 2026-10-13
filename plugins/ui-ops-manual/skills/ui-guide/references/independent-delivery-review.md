@@ -4,7 +4,7 @@
 
 ## 審核者與輸入
 
-可用獨立子代理時，交由未參與本次文件產製的 reviewer 讀取並檢查；reviewer 不得參與本次文件產製，且它讀取的內容與產製者分開提供。無法使用獨立 reviewer 時，明確記錄 **`independent review pending`**，不能填寫假身份或把 pending 當成 pass。應持續完成所有不依賴 reviewer 的已授權工作；若暫時交付目前產物，可在檔名、資料夾或交付對話清楚標示 `draft`，不能宣稱已完成審核。
+沿用既有獨立審核機制，由未參與本次文件產製的 reviewer 直接讀取並檢查；builder、腳本或機械報告可以整理 evidence，不能取代 reviewer 判讀或把 pending 當成 pass。若本任務指定人工 reviewer，人工確認前明確記錄 **`independent review pending`**，不能填寫假身份。應持續完成所有不依賴 reviewer 的已授權工作；若暫時交付目前產物，可在檔名、資料夾或交付對話清楚標示 `draft`，不能宣稱已完成審核。
 
 reviewer 直接讀取下列輸入：
 
@@ -18,6 +18,16 @@ reviewer 直接讀取下列輸入：
 
 原始圖片可供 reviewer 在受限工作區讀取，但不得複製到交付封裝、DOCX 或 review artifact 內容；敏感原值不得出現在 caption、替代文字、metadata、檔名或報告文字。報告只寫不含原值的類別、雜湊、檔案識別與定位資訊。
 
+## 操作文字與計算內容
+
+正文面向一般系統操作者。reviewer 要確認正文先用畫面名稱與日常用語交代操作、條件、選項與計算影響；必要業務詞在首次出現時簡短解釋，UI 原文照保留。代理試作操作、未儲存／未執行狀態、工具、hash、人工 pending 與 QA 限制應留在 QA record、finding ledger、review artifact 或交付說明。`draft` 以檔名或交付說明標示；只有有證據且對讀者有用的提醒才可放在既有正文章節。把「本次不要儲存」等試作限制寫成業務規則，或把 QA-only 細節當成讀者必須遵守的操作條件，屬內容錯誤。
+
+可驗證的來源版本依既有版型在正文簡述一次即可；來源分類、程式識別字、方法追蹤、capture state 與雜湊放 QA。算例先用白話說明順序，只有必要時才用簡單數字例子，列明假設、公式或計算方式、順序與結果，並明確標示「合成示例，非實測」；避免大量公式符號、英文變數與程式術語，不可因此遺失條件或改變公式，也不可把合成結果當成實測或加入來源未支持的業務規則／結果。
+
+reviewer 也要回查抽象措辭：保留「完整／正確／符合規範」時，正文需有具體欄位與判斷或精準引用；「具備權限者」需有具體角色證據；「依情況／相關設定」需列出情況與對應處理。這些不是禁用詞或字數限制；只有含糊到讀者無法操作、判斷或回查時才形成阻擋。
+
+每個計算選項都要讓讀者找到適用條件、改變什麼、計算順序及未命中／未填退回規則。計算順序先用白話說明，正文使用 UI／業務名稱，不以內部變數或方法名稱代替；來源未證實時應標為待確認，不為具體而補造事實。
+
 ## 第二輪 delta review
 
 baseline 必須是上一輪獨立 review artifact 中個別已通過且沒有未解 finding 的語意項目，或使用者明確接受的範圍／限制；artifact 的 `fail`、`blocked`、`pending` 與未解項目不可作為 baseline。使用者接受內容只能按明示範圍承接，不得冒充獨立 reviewer pass；沒有可驗證 baseline 時按首輪完整語意 review。review artifact 可在既有 schema 外記錄 `baseDocxSha256`、`baseReviewArtifactSha256`（若有）、baseline 來源，以及 `changed`／`affected`／`inherited` 清單。`inherited` 項目要列現檔 hash、capture state、依賴核對結果與承接理由；任何不符、unknown 或全域版面變更都列入 `affected`，不得以 hash 當像素或語意 pass。
@@ -30,10 +40,10 @@ reviewer 每輪仍直接檢查最終 renderer 的全部頁面，包含分頁、�
 
 | 檢查 | reviewer 要直接確認的內容 |
 | --- | --- |
-| `requirements` | 需求、範圍、章節順序、入口、步驟、欄位表、成功影響與操作後檢核是否完整且相符；每個欄位／表頭／必填標記／可見選項都能由具體 capture id 與 manifest source 回溯。 |
+| `requirements` | 需求、範圍、章節順序、入口、步驟、欄位表、成功影響與操作後檢核是否完整且相符；每個欄位／表頭／必填標記／可見選項都能由具體 capture id 與 manifest source 回溯。抽象措辭有具體欄位／判斷或精準引用，未證實的角色權限、QA-only 限制與試作狀態沒有被寫成正文規則。 |
 | `redaction` | 實際畫面來源是否適用；身分 ID、地址、保單號、帳單號、合約號等預設敏感值是否逐一遮蔽；金額是否依預設保留或依明示要求遮蔽；欄名與操作目標仍可辨識。 |
 | `visual` | 最終頁面中的字型、標題層級、表格與圖片相對關係、表格在容器可用內容區的置中、分頁、裁切與圖說是否符合視覺標準。 |
-| `operation` | 每個紅框／編號／caption 是否指向正確控制項；步驟、畫面狀態、成功／失敗／取消行為與檢核方式是否可按實際畫面完成。 |
+| `operation` | 每個紅框／編號／caption 是否指向正確控制項；步驟、畫面狀態、成功／失敗／取消行為與檢核方式是否可按實際畫面完成。每個計算選項的適用條件、影響、順序及未命中／未填退回規則可由正文與證據核對。 |
 
 reviewer 依原始證據和成品逐項判斷，不把 OCR、像素差異、DOCX 結構或腳本 exit code 當成隱碼或視覺 pass 的替代品。發現阻擋項或任何一項 `fail` 時，overall result 為 `fail`；證據不足或無法檢視時為 `blocked`，不可用猜測補成 `pass`。非阻擋的措辭精緻度、次要欄位深度或輕微美觀限制，可維持該 check 為 `pass`，並在 `reason`／`evidence` 記錄 accepted limitation。
 
@@ -56,6 +66,10 @@ reviewer 依原始證據和成品逐項判斷，不把 OCR、像素差異、DOCX
 | 身分 ID、地址、保單號、帳單號或合約號在成品中可讀 | `redaction` 為 `fail`；金額依預設保留本身不是失敗。 |
 | 表格寬度依內容變動，但仍以容器可用內容區置中 | `visual` 通過；輕微偏移但仍可讀且不影響操作可記為 accepted limitation，只有偏移造成內容不可讀、控制項／欄位誤導或超出容器才 `visual` 為 `fail`。 |
 | builder 宣稱 `verified`、舊 artifact 或任一 reviewed file hash 與現檔不符 | `overall` 不得為 `pass`；證據不足或 reviewer 尚未完成時為 `blocked`。 |
+| 正文把代理試作、未儲存／未執行、工具、hash、人工 pending 或 QA 限制寫成業務操作條件／結果，或把「本次不要儲存」當成業務規則 | `requirements` 或 `operation` 為 `fail`；若只缺少可操作的證據則為 `blocked`。draft 應在檔名／交付說明標示，必要提醒需有證據且對讀者有用。 |
+| 保留「完整／正確／符合規範」卻沒有具體欄位與判斷或精準引用；以「具備權限者」限制操作卻沒有具體角色證據；以「依情況／相關設定」卻沒有情況對應處理 | 含糊導致讀者無法操作、判斷或回查時，`requirements` 或 `operation` 為 `fail`；純冗詞或偏好且不影響操作可記為 accepted limitation。 |
+| 計算選項缺少適用條件、改變什麼、計算順序或未命中／未填退回規則，或以內部變數／方法名稱代替 UI／業務名稱 | `operation` 為 `fail`；來源不足以判定必要資訊時為 `blocked`，不可自行補造。 |
+| 算例未說明必要假設／公式／順序，未標示「合成示例，非實測」，或把合成數值宣稱為實測／來源未支持的業務規則／結果 | `operation` 或 `requirements` 為 `fail`；移除算例或補齊有證據的假設與標示。 |
 
 ## Review artifact schema
 
@@ -153,11 +167,47 @@ reviewer 依原始證據和成品逐項判斷，不把 OCR、像素差異、DOCX
 reviewer 完成上述 review JSON 後，再檢查紀錄與檔案是否一致：
 
 ```text
-<bundled-python> "<skill>/scripts/audit_delivery.py" --docx "<final.docx>" --review "<qa>/review.json" --output "<qa>/review-validation.json" --image-evidence "<qa>/delivered-images.json" --require-default-layout
+<bundled-python> "<skill>/scripts/audit_delivery.py" --docx "<final.docx>" --review "<qa>/review.json" --output "<qa>/review-validation.json" --image-evidence "<qa>/delivered-images.json" --require-acceptance --acceptance-catalog "<skill>/references/acceptance-rule-catalog.json" --require-default-layout
 ```
 
 第二次輸出使用不同檔名，不能覆寫已被 review JSON 引用及計算雜湊的 `structure.json`。工具的 `mechanical_status` 表示結構檢查結果，`independent_review.status` 表示審核紀錄的完整性與檔案綁定檢查；兩者都不等於工具親自完成內容或視覺審核。`manual_review` 項目交由 reviewer 判讀，`failed` 項目需修正，或由 reviewer 核實是否屬使用者／版型已明示的合法例外並記錄依據。例如動態表寬與合法合併儲存格不應僅因無法機械判定就永遠卡住交付。
 
+本技能的正式交付一律啟用 [acceptance-rule-catalog.json](acceptance-rule-catalog.json)；正式 audit 命令必須顯式加入 `--require-acceptance --acceptance-catalog "<skill>/references/acceptance-rule-catalog.json"`（任務若有明示範圍例外，改用保留原始 ID 的任務限定 catalog）。缺少 `acceptance`、catalog item、最終輸出 evidence 或 hash 時，正式 audit 必須維持 blocked。未帶 `--require-acceptance` 僅是舊版 CLI 的相容行為，不構成目前技能交付。
+
 正式交付由 reviewer 綜合需求及全部 findings 作成結論；不得僅因腳本 exit code 0 或紀錄驗證 `pass` 就宣稱完成。所有頁面是否齊全、是否與最終 DOCX 的 render manifest 相符，仍由 reviewer 核對。
 
-程式可檢查 DOCX 是否能開啟、章節／表格／圖片是否存在、表格對齊屬性、包裝內容、雜湊和 schema；它不能證明 reviewer 身分真實，也不能單獨證明圖片中識別資料已不可辨識、紅框語意正確或渲染視覺可讀。人工或獨立 reviewer 對內容的直接檢視才是這些判斷的 evidence。review environment、工具版本、權限與 fallback 結果留在對話或外部審核紀錄，**不得寫入 DOCX**。
+程式可檢查 DOCX 是否能開啟、章節／表格／圖片是否存在、表格對齊屬性、包裝內容、雜湊和 schema；它不能證明 reviewer 身分真實，也不能單獨證明圖片中識別資料已不可辨識、紅框語意正確、正文足以讓操作者完成工作或渲染視覺可讀。人工 reviewer 對內容的直接檢視才是這些判斷的 evidence；builder 或腳本不得宣稱取代人工審閱。review environment、工具版本、權限、QA 限制與 fallback 結果留在對話或外部審核紀錄，**不得寫入 DOCX**。
+
+## 原子 acceptance 與最終輸出證據
+
+本技能的每次正式交付都以 [acceptance-rule-catalog.json](acceptance-rule-catalog.json) 為唯一規範目錄。既有四類 `requirements`、`redaction`、`visual`、`operation` 仍是摘要與總結 gate；catalog 的原子項目是它們的可追溯明細，不另建立逐句清單。review artifact 另加：
+
+```json
+{
+  "acceptance": {
+    "schema_version": 1,
+    "items": [
+      {
+        "id": "annotation-color",
+        "applicable": true,
+        "status": "pass",
+        "reason": "最終 annotated PNG 的每個紅框與 badge 均已直接檢視；target_scope=全部標註，location=qa/annotated，rationale=標註色與文件 teal 分離。",
+        "evidence": ["qa/review.json", "qa/annotated/step-01.png"],
+        "actual_artifacts": [
+          {"path": "qa/annotated/step-01.png", "sha256": "<sha256>", "scope": "final annotated image"}
+        ]
+      }
+    ]
+  }
+}
+```
+
+每個 catalog row（`required: true`）在 `acceptance.items` 恰好出現一次；`applicability: "always"` 的 row 必須維持 `applicable: true`，`applicability: "conditional"` 的 row 只有在明示的 scope 例外成立時才可 `applicable: false`，並以 `na`／`not_applicable` 和 reason 說明。每個 `applicable` 項目要有 outcome `status`、target scope、location、evidence 與 rationale（由支援欄位或 `reason` 明示），evidence 必須是 `reviewed_files[].path` 的精確值，`pass` 必須綁定實際最終輸出檔與 SHA-256。可將同一組 evidence 套用到多個 item，或在一項中涵蓋多張圖／多個流程，但必須先列出 exhaustive target set；不能用 source-only 規範、builder 宣稱或機械 exit code 代替最終輸出證據。非適用項目要有 reason；缺項、重複、無法讀取、`pending`／`blocked`／`fail` 或 hash 不符均不得為 pass。
+
+builder 可以先完成產製與機械／結構／來源自查並把文件交為 `draft`；這不等於獨立交付審核。獨立 reviewer 必須直接讀取真正最終 DOCX、完整 renderer 的每一頁、嵌入圖片與相關證據，不能由 builder 改名、換 id 或由腳本代填 reviewer pass。四模型八份文件的 plugin 回歸執行本身也不是各份 DOCX 的獨立 reviewer；人工審閱未完成時保留 `independent review pending`。
+
+本版的 `full-render-all-pages` 是適用的原子項目：必須以核准 renderer 產生完整最終頁面並逐頁檢視；結構／嵌圖檢查不能替代它。
+
+## 操作文字回查（測試規範）
+
+依 [manual-writing-standard.md](manual-writing-standard.md) 核對最終 DOCX 與來源：正文是否以系統操作者為讀者，控制項名稱、前置條件、動作順序、否定、數值、結果與圖說是否一致；每個計算選項是否有適用條件、影響、順序及未命中／未填退回規則；不得以流暢文字補造限制、權限或下游影響。發現沿用現有 requirements／operation 的 reason／evidence 及 finding ledger，記錄原句／問題／修正或保留理由並綁定實際輸出 hash，不要求每句紀錄、不增加 schema 欄位或審核輪次。影響操作的錯誤、含糊到無法操作或證據缺口依既有 fail／blocked 規則處理；純措辭改善維持非阻擋分類。人工尚未回覆時保留 pending，builder 或腳本不代填人工通過。

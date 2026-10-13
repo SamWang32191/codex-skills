@@ -25,6 +25,13 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Iterable, Mapping, Sequence
 from xml.etree import ElementTree as ET
 
+try:
+    from acceptance import validate_acceptance
+    from content_candidates import inspect_docx
+except ImportError:  # pragma: no cover - package import fallback
+    from .acceptance import validate_acceptance  # type: ignore[no-redef]
+    from .content_candidates import inspect_docx  # type: ignore[no-redef]
+
 
 SCHEMA_VERSION = 1
 IMAGE_EVIDENCE_SCHEMA_VERSION = 1
@@ -752,6 +759,9 @@ def _independent_review(
     docx: Path,
     docx_sha256: str | None,
     media_hashes: set[str],
+    *,
+    require_acceptance: bool = False,
+    acceptance_catalog_path: Path | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     empty_checks = {name: {"status": "blocked", "evidence_count": 0, "reason_provided": False} for name in CHECK_NAMES}
     if review is None:
@@ -831,6 +841,17 @@ def _independent_review(
     if any(status != "pass" for status in file_statuses):
         reasons.append("reviewed_file_hash_unverified")
 
+    acceptance_result = validate_acceptance(
+        review,
+        review_path or docx.parent / "review.json",
+        reviewed_paths,
+        docx,
+        require=require_acceptance,
+        catalog_path=acceptance_catalog_path,
+    )
+    if require_acceptance and acceptance_result["status"] != "pass":
+        reasons.extend(acceptance_result.get("reason_codes", ["acceptance_blocked"]))
+
     raw_checks = review.get("checks")
     raw_checks = raw_checks if isinstance(raw_checks, Mapping) else {}
     checks: dict[str, dict[str, Any]] = {}
@@ -872,6 +893,7 @@ def _independent_review(
         or (media_count and image_count < media_count)
         or bool(media_hashes - image_hashes)
         or check_status != "pass"
+        or (require_acceptance and acceptance_result["status"] != "pass")
         or declared_overall != "pass"
     ):
         status = "blocked"
@@ -884,6 +906,7 @@ def _independent_review(
         "identities": {"explicit": identities_explicit, "distinct": identities_distinct},
         "reviewed_files": reviewed_results,
         "checks": checks,
+        "acceptance": acceptance_result,
     }
     if reasons:
         result["reason_codes"] = sorted(set(reasons))
@@ -895,6 +918,8 @@ def audit_docx(
     review_path: str | Path | None = None,
     require_default_layout: bool = False,
     image_evidence_path: str | Path | None = None,
+    require_acceptance: bool = False,
+    acceptance_catalog_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return a safe report for a DOCX, review JSON, and optional image allowlist."""
 
@@ -915,7 +940,7 @@ def audit_docx(
         "tables": [],
         "package": {"status": "blocked", "media": [], "unreferenced_media": []},
         "limitations": [
-            "document_text_not_inspected",
+            "document_text_semantics_not_inspected",
             "image_pixels_and_redaction_not_inspected",
             "ocr_not_run",
             "visual_and_operation_not_proven_by_structure",
@@ -923,7 +948,7 @@ def audit_docx(
         ],
     }
     if require_default_layout:
-        report["limitations"].remove("document_text_not_inspected")
+        report["limitations"].remove("document_text_semantics_not_inspected")
         report["limitations"].append("document_text_only_checked_for_default_update_header_tokens")
     mechanical_status = "failed" if docx_sha256 is None else "pass"
     findings: list[dict[str, Any]] = []
@@ -1034,8 +1059,21 @@ def audit_docx(
 
     report["mechanical_status"] = mechanical_status
     report["findings"] = findings
+    candidate_report = inspect_docx(docx)
+    report["candidate_warnings"] = candidate_report.get("warnings", [])
+    report["candidate_warnings_status"] = candidate_report.get("status", "unavailable")
+    report["candidate_warnings_semantic_review"] = candidate_report.get("semantic_review", "not_performed")
     review_value, review_error = _read_review(review)
-    independent, _ = _independent_review(review_value, review, docx, docx_sha256, media_hashes)
+    catalog = Path(acceptance_catalog_path).expanduser().resolve() if acceptance_catalog_path is not None else None
+    independent, _ = _independent_review(
+        review_value,
+        review,
+        docx,
+        docx_sha256,
+        media_hashes,
+        require_acceptance=require_acceptance or catalog is not None,
+        acceptance_catalog_path=catalog,
+    )
     if review_error:
         independent = {"status": "blocked", "reason_code": review_error, "checks": {name: {"status": "blocked", "evidence_count": 0, "reason_provided": False} for name in CHECK_NAMES}}
     report["independent_review"] = independent
@@ -1062,6 +1100,7 @@ def _output_conflicts(
     docx: str | Path,
     review: str | Path | None,
     image_evidence: str | Path | None = None,
+    acceptance_catalog: str | Path | None = None,
 ) -> bool:
     """Prevent an output path from replacing an input or reviewed evidence."""
 
@@ -1103,6 +1142,8 @@ def _output_conflicts(
                     asset_path = _resolve_declared_image_input(image_evidence_input, item.get("path"))
                 if asset_path is not None:
                     inputs.append(asset_path)
+    if acceptance_catalog is not None:
+        inputs.append(_resolved(acceptance_catalog))
     return any(os.path.normcase(destination) == os.path.normcase(path) for path in inputs)
 
 
@@ -1113,7 +1154,7 @@ def _execution_failed(report: Mapping[str, Any]) -> bool:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Audit a UI-manual DOCX without reading text or image pixels.")
+    parser = argparse.ArgumentParser(description="Audit a UI-manual DOCX without inferring text semantics or reading image pixels.")
     parser.add_argument("--docx", required=True, help="DOCX path to inspect")
     parser.add_argument("--output", required=True, help="JSON output path, or - for stdout")
     parser.add_argument("--review", help="Optional independent review JSON path")
@@ -1126,14 +1167,30 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Require the first default-layout update-record table header",
     )
+    parser.add_argument(
+        "--require-acceptance",
+        action="store_true",
+        help="Require the review JSON to contain a hash-bound acceptance catalog.",
+    )
+    parser.add_argument(
+        "--acceptance-catalog",
+        help="Optional acceptance catalog JSON; implies --require-acceptance.",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if _output_conflicts(args.output, args.docx, args.review, args.image_evidence):
+    if _output_conflicts(args.output, args.docx, args.review, args.image_evidence, args.acceptance_catalog):
         return 2
-    report = audit_docx(args.docx, args.review, args.require_default_layout, args.image_evidence)
+    report = audit_docx(
+        args.docx,
+        args.review,
+        args.require_default_layout,
+        args.image_evidence,
+        args.require_acceptance,
+        args.acceptance_catalog,
+    )
     try:
         _write_report(report, args.output)
     except OSError:
